@@ -1,0 +1,1 @@
+export const chakraLabel = (value) => value ? value.replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase()) : "Mixed / Inconclusive"; export const formatConfidence = (value) => value || "Inconclusive";

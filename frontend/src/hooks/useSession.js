@@ -1,0 +1,1 @@
+const SESSION_KEY = "sy_guidance_session_id"; export function getStoredSessionId() { return localStorage.getItem(SESSION_KEY); } export function storeSessionId(sessionId) { localStorage.setItem(SESSION_KEY, sessionId); } export function clearStoredSessionId() { localStorage.removeItem(SESSION_KEY); }

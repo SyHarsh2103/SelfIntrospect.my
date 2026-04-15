@@ -1,0 +1,1 @@
+export default function OptionItem({ selected, label, onClick }) { return <button type="button" onClick={onClick} className={`w-full rounded-full border px-4 py-3 text-left text-sm transition ${selected ? "border-saffron bg-saffron text-white" : "border-amber-200 bg-white hover:border-saffron hover:text-saffron"}`}>{label}</button>; }

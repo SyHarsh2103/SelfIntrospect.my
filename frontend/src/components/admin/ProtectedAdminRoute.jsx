@@ -1,0 +1,1 @@
+import { Navigate } from "react-router-dom"; import { useAdmin } from "../../context/AdminContext"; export default function ProtectedAdminRoute({ children }) { const { auth } = useAdmin(); if (!auth?.token) return <Navigate to="/admin/login" replace />; return children; }
