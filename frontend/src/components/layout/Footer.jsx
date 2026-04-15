@@ -50,8 +50,7 @@ export default function Footer() {
       </div>
 
       <div className="border-t border-orange-100 px-4 py-4 text-center text-xs text-slate-500">
-        Sahajayoga is free of cost. © {new Date().getFullYear()} Sahajayoga
-        Guidance Tool.
+        Sahajayoga is free of cost. © {new Date().getFullYear()} Self Introspect.
       </div>
     </footer>
   );
