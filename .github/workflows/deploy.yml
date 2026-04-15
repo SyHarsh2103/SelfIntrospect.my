@@ -20,21 +20,31 @@ jobs:
           script: |
             set -e
 
-            cd /var/www/self-introspect
+            echo "Go to project folder"
+            cd /var/www/selfintrospect.my
 
+            echo "Pull latest code"
             git pull origin main
 
+            echo "Install backend dependencies"
             cd backend
             npm install
+
+            echo "Restart backend"
             pm2 restart self-introspect-api || pm2 start server.js --name self-introspect-api
 
+            echo "Install frontend dependencies"
             cd ../frontend
             npm install
+
+            echo "Build frontend"
             npm run build
 
+            echo "Copy frontend build"
             rm -rf /var/www/self-introspect-frontend/*
             cp -r dist/* /var/www/self-introspect-frontend/
 
+            echo "Save PM2 and reload NGINX"
             pm2 save
             nginx -t
             systemctl reload nginx
