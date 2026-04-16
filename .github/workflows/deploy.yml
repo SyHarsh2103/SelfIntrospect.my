@@ -41,7 +41,7 @@ jobs:
           set -e
 
           APP_DIR="/var/www/SelfIntrospect.my"
-          FRONTEND_DEPLOY_DIR="/var/www/SelfIntrospect.my"
+          FRONTEND_DEPLOY_DIR="/var/www/self-introspect-frontend"
           APP_NAME="self-introspect-api"
 
           echo "Installing backend dependencies..."
@@ -60,9 +60,9 @@ jobs:
           npm run build
 
           echo "Deploying frontend build..."
-          mkdir -p "$/var/www/self-introspect-frontend"
-          rm -rf "$/var/www/self-introspect-frontend"/*
-          cp -r /var/www/SelfIntrospect.my/frontend/dist/* "$/var/www/self-introspect-frontend"/
+          mkdir -p "$FRONTEND_DEPLOY_DIR"
+          rm -rf "$FRONTEND_DEPLOY_DIR"/*
+          cp -r "$APP_DIR/frontend/dist/"* "$FRONTEND_DEPLOY_DIR"/
 
           echo "Reloading nginx..."
           nginx -t
