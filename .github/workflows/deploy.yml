@@ -33,15 +33,15 @@ jobs:
             --exclude "frontend/.env" \
             --exclude "frontend/.env.production" \
             -e "ssh -p ${{ secrets.SSH_PORT }}" \
-            ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/selfintrospect.my
+            ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/SelfIntrospect.my
 
       - name: Build and restart on VPS
         run: |
           ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
           set -e
 
-          APP_DIR="/var/www/self-introspect"
-          FRONTEND_DEPLOY_DIR="/var/www/selfintrospect.my"
+          APP_DIR="/var/www/SelfIntrospect.my"
+          FRONTEND_DEPLOY_DIR="/var/www/SelfIntrospect.my"
           APP_NAME="self-introspect-api"
 
           echo "Installing backend dependencies..."
