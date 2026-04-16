@@ -29,6 +29,8 @@ export const publicApi = {
   getContent: (key) => api.get(`/content/${key}`).then(unwrap),
   submit: (payload) => api.post("/submit", payload).then(unwrap),
   getResult: (sessionId) => api.get(`/result/${sessionId}`).then(unwrap),
+  updateResultUserInfo: (sessionId, payload) =>
+    api.patch(`/result/${sessionId}/user-info`, payload).then(unwrap),
 };
 
 export const adminApi = {

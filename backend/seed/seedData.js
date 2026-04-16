@@ -24,7 +24,111 @@ export const contentSeeds = [
   { key: "inconclusiveGuidance", title: "Inconclusive Guidance", content: "Your answers show a mixed pattern. A general cleansing approach, daily meditation, and guidance from experienced Sahajayogis may help more than focusing on one specific area." },
 ];
 
-export const questionsSeed = [
+const optionExplanations = {
+  "1:left-side": "This answer may reflect heaviness, sensitivity, or catching felt on the left side. In Sahajayoga understanding, the left side can be connected with emotions, past impressions, and inner heaviness. This should be read as a gentle observation point, not as a fixed conclusion.",
+  "1:right-side": "This answer may reflect heat, pressure, or overactivity on the right side. In Sahajayoga understanding, the right side can be connected with action, planning, future orientation, and mental or physical overuse.",
+  "1:both": "This answer may reflect a general imbalance or mixed sensation rather than one clear side. In Sahajayoga practice, both hands are observed gently during meditation to understand the subtle state more clearly.",
+  "1:crown": "This answer may reflect attention on Sahasrara or difficulty feeling clear connection at the crown. In Sahajayoga, Sahasrara is connected with integration, silence, and inner connection.",
+  "1:heart-area": "This answer may reflect sensitivity around confidence, security, or emotional safety. In Sahajayoga understanding, the heart area is connected with love, fearlessness, and inner security.",
+  "1:neutral": "This answer shows that the sensation is not clear at this stage. In Sahajayoga, it is natural for a seeker to gradually develop subtle awareness through regular meditation and collective guidance.",
+
+  "2:1": "A very mild intensity suggests the sensation is present but not strong. It may be useful to simply observe it calmly without fear or over-analysis.",
+  "2:2": "A mild intensity suggests a light imbalance pattern may be present. In Sahajayoga, this can be observed gently through meditation and vibrations.",
+  "2:3": "A moderate intensity suggests the selected sensation may need more attention in self-observation. It should still be treated as supportive guidance rather than a final conclusion.",
+  "2:4": "A strong intensity suggests the selected sensation may currently feel important or noticeable. In Sahajayoga, this can be observed with calm attention and regular meditation.",
+  "2:5": "A very strong intensity suggests the selected sensation feels prominent. This should be approached gently, and deeper clarity may come through regular meditation and guidance from experienced Sahajayogis.",
+
+  "3:heat": "Heat in the hands or head may reflect right-side activity, overthinking, irritation, or pressure in attention. In Sahajayoga, heat is often observed as a sign that something may need cooling, balance, or silence.",
+  "3:cool": "Cool breeze may indicate a more balanced or settled state. In Sahajayoga, cool vibrations are generally associated with inner balance, clarity, and a more peaceful meditative state.",
+  "3:tingling": "Tingling may reflect subtle sensitivity or an area coming into awareness. It should be observed calmly without fear, as vibrations can become clearer with regular meditation.",
+  "3:numb": "Numbness or heaviness may reflect left-side heaviness, emotional load, or low energy. In Sahajayoga understanding, this may point toward past-oriented attention or emotional sensitivity.",
+  "3:restless": "Restlessness may reflect difficulty becoming still, excessive activity, or pressure in the attention. In Sahajayoga, this can be connected with right-side movement and mental activity.",
+  "3:none": "No sensation may reflect that subtle awareness is not yet clear or attention is not settled. In Sahajayoga, vibrations often become clearer through regular practice and collective meditation.",
+  "3:neutral": "Not meditating regularly means the result should be read carefully. Sahajayoga understanding becomes clearer through direct experience, regular meditation, and inner observation.",
+
+  "4:fear": "Fear or anxiety may reflect a need for inner security, confidence, and steadiness. In Sahajayoga, this pattern can be connected with the heart area and groundedness.",
+  "4:guilt": "Guilt or feeling unworthy may reflect pressure around self-acceptance and expression. In Sahajayoga understanding, guilt is often connected with Vishuddhi and can affect communication and collectivity.",
+  "4:sadness": "Sadness or low feeling may reflect emotional heaviness, past orientation, or reduced inner joy. In Sahajayoga, this may be observed as a left-side tendency.",
+  "4:anger": "Anger or irritation may reflect heat, reaction, or right-side overactivity. In Sahajayoga, this may be connected with excessive action, expectation, or mental pressure.",
+  "4:grief": "Emotional heaviness or grief may reflect a deep left-side sensitivity and heart-level heaviness. This should be approached gently through meditation and compassionate self-observation.",
+  "4:insecurity": "Insecurity or lack of confidence may reflect sensitivity around the heart area. In Sahajayoga, the heart is connected with security, courage, and inner strength.",
+  "4:peaceful": "Feeling peaceful and settled may reflect a more balanced inner state. In Sahajayoga, this can be connected with the center channel and present-moment awareness.",
+  "4:neutral": "Mixed feelings may show that the emotional pattern is not yet clear. This can happen when multiple tendencies are present at the same time and need calm observation.",
+
+  "5:overthinking": "Too much thinking may reflect mental overactivity, attention moving too much into analysis, or difficulty becoming thoughtless. In Sahajayoga, this can be connected with right-side activity and pressure on attention.",
+  "5:future": "Planning too much or being future-focused may reflect right-side movement and pressure on attention. In Sahajayoga, balance comes when attention returns gently to the present.",
+  "5:confusion": "Confusion or lack of clarity may reflect pressure at the level of attention and discrimination. In Sahajayoga understanding, clarity improves when the mind becomes silent and centered.",
+  "5:pressure": "Pressure or heaviness in the head may reflect mental strain, unresolved thought patterns, or difficulty settling at Sahasrara. This should be observed gently through meditation.",
+  "5:past": "Negative thoughts or old memories may reflect a left-side tendency, where attention goes into the past. In Sahajayoga, this is observed without judgment and gradually balanced through meditation.",
+  "5:forgive": "Difficulty forgiving may reflect pressure at Agnya, where thoughts, reactions, or ego-conditioning can remain active. In Sahajayoga, forgiveness is important for mental silence and inner lightness.",
+  "5:calm": "A calm and clear mind may reflect a more centered state. In Sahajayoga, this supports thoughtless awareness and stable attention.",
+  "5:distracted": "Distraction or lack of focus may reflect scattered attention. In Sahajayoga, attention gradually becomes steadier through regular meditation and connection at Sahasrara.",
+
+  "6:deep": "Deep and peaceful meditation may reflect a balanced and centered inner state. In Sahajayoga, this is associated with silence, stability, and connection with the present moment.",
+  "6:wandering": "A wandering mind may reflect unsettled attention. In Sahajayoga, attention is gently brought back to Sahasrara and allowed to settle without force.",
+  "6:thoughts": "Too many thoughts during meditation may reflect right-side activity or pressure at Agnya. In Sahajayoga, the aim is not to fight thoughts but to rise above them into thoughtless awareness.",
+  "6:sleepy": "Sleepiness or dullness may reflect low energy or left-side heaviness. In Sahajayoga, meditation can gradually bring freshness, alertness, and inner balance.",
+  "6:no-vibrations": "No vibrations or inability to feel may reflect that subtle awareness is not yet clear. This can improve through regular meditation, sincerity, and collective support.",
+  "6:restless": "Restless body during meditation may reflect difficulty grounding or excessive activity. In Sahajayoga, steadiness develops gradually as attention becomes calmer.",
+  "6:neutral": "Irregular meditation means the result should be read as an initial reflection only. Regular practice helps reveal subtler patterns more clearly.",
+
+  "7:mooladhara": "Disturbance around innocence, purity, or groundedness may reflect a need for steadiness and simplicity. In Sahajayoga, Mooladhara is connected with innocence, purity, and foundational balance.",
+  "7:swadhisthana": "Disturbance around creativity, attention, or desires may reflect overuse of mental energy or scattered attention. In Sahajayoga, Swadhisthana is connected with pure knowledge and creative attention.",
+  "7:nabhi": "Disturbance around satisfaction or nourishment may reflect restlessness, dissatisfaction, or lack of inner contentment. In Sahajayoga, Nabhi is connected with satisfaction, peace, and dharma.",
+  "7:void": "Disturbance around security, family, or belonging may reflect a need for guidance, balance, and inner support. In Sahajayoga, the Void is connected with the guru principle and dharma.",
+  "7:heart": "Disturbance around love, confidence, or acceptance may reflect heart-level sensitivity. In Sahajayoga, the heart is connected with love, security, and fearlessness.",
+  "7:vishuddhi": "Disturbance around communication, expression, or guilt may reflect Vishuddhi sensitivity. In Sahajayoga, this area is connected with collectivity, respect, expression, and the witness state.",
+  "7:agnya": "Disturbance around forgiveness, ego, or conditioning may reflect pressure at Agnya. In Sahajayoga, forgiveness helps attention move beyond thought and reaction.",
+  "7:sahasrara": "Disturbance around peace, integration, or Divine connection may reflect a need to deepen meditation and attention at Sahasrara. In Sahajayoga, Sahasrara is connected with integration and silent awareness.",
+  "7:neutral": "No specific disturbance suggests no clear life-area pattern was selected. Continue observing honestly through meditation.",
+
+  "8:strongly": "Strong difficulty forgiving may reflect pressure at Agnya. In Sahajayoga, forgiveness is understood as a powerful inner movement that helps release mental knots and opens the way to silence.",
+  "8:mildly": "Mild difficulty forgiving may reflect some mental or emotional holding. In Sahajayoga, gentle forgiveness can help attention become lighter and clearer.",
+  "8:no": "Not having difficulty forgiving may indicate less pressure in this area at the moment. Continue maintaining a forgiving and witness-like attitude.",
+  "8:neutral": "Not applicable means this question may not be relevant to your current state. It will not strongly influence the report.",
+
+  "9:headache": "Headache or pressure on the crown may reflect pressure in attention, thought activity, or difficulty settling at Sahasrara. This should be treated as self-observation, not a medical conclusion.",
+  "9:throat": "Neck or throat discomfort may reflect sensitivity around expression, communication, or guilt. In Sahajayoga, this can be connected with Vishuddhi.",
+  "9:chest": "Chest tightness or heart palpitations may reflect sensitivity around security, confidence, or emotional heaviness. This is not a medical diagnosis; urgent physical symptoms should be checked by a healthcare professional.",
+  "9:stomach": "Stomach discomfort or digestive issues may reflect disturbance around satisfaction, nourishment, or balance. In Sahajayoga, Nabhi is connected with contentment and wellbeing.",
+  "9:lower-back": "Lower back or pelvic discomfort may reflect grounding or lower-center sensitivity. This should be understood gently and not as a medical diagnosis.",
+  "9:cold": "Cold hands or feet may reflect left-side heaviness or low energy. In Sahajayoga, this can be observed as a possible left-channel tendency.",
+  "9:heat": "Excessive heat may reflect right-side overactivity, irritation, or pressure. In Sahajayoga, heat is often observed as a sign that cooling and balance may be needed.",
+  "9:neutral": "None of these symptoms means this section may not indicate a clear physical pattern. Continue observing your state calmly.",
+
+  "10:strong": "A strong and growing connection may reflect a positive movement toward balance, faith, and deeper meditation. In Sahajayoga, connection is strengthened through regular practice and inner silence.",
+  "10:inconsistent": "An inconsistent connection may reflect changing attention or irregular meditation. In Sahajayoga, steadiness grows through regular practice and collective support.",
+  "10:weak": "A weak connection may reflect difficulty feeling vibrations, silence, or inner confidence. This can improve gradually with regular meditation and sincere attention.",
+  "10:doubting": "Doubt or questioning may reflect mental activity at Agnya or uncertainty in the attention. In Sahajayoga, direct experience through meditation is important for clarity.",
+  "10:neutral": "Being new and still learning is natural. The report should be read gently as an introductory reflection, not as a final assessment.",
+
+  "11:active": "Being very active, busy, or driven may reflect right-channel overactivity. In Sahajayoga, this can be connected with heat, future planning, and excessive doing.",
+  "11:withdrawn": "Being withdrawn, passive, or low energy may reflect left-channel heaviness. In Sahajayoga, this can be connected with past orientation, sadness, or emotional weight.",
+  "11:balanced": "Feeling balanced may reflect a more centered state. In Sahajayoga, the center channel is connected with present awareness and steadiness.",
+  "11:past": "Living in the past or returning to old memories may reflect left-side movement of attention. In Sahajayoga, this is observed gently and released through meditation.",
+  "11:future": "Planning ahead too much may reflect right-side activity and future-oriented attention. In Sahajayoga, balance comes when attention returns to the present.",
+  "11:neutral": "Not being sure means the channel tendency is not clear yet. Regular meditation may help the pattern become easier to observe.",
+
+  "12:joyful": "Feeling satisfied and joyful may reflect inner contentment and balance. In Sahajayoga, joy is a sign of a more settled and connected state.",
+  "12:somewhat": "Some satisfaction suggests no strong disturbance in this area. Continue observing whether the sense of joy remains stable.",
+  "12:dry": "Lacking joy or feeling dry inside may reflect reduced satisfaction or inner nourishment. In Sahajayoga, this can be connected with Nabhi and the need for deeper contentment.",
+  "12:dissatisfied": "Dissatisfaction may reflect restlessness, lack of contentment, or emotional heaviness. In Sahajayoga, satisfaction is observed as an important quality of inner balance.",
+  "12:seeking": "Seeking more meaning may reflect a genuine spiritual search and desire for deeper connection. In Sahajayoga, seeking can become clearer through direct meditative experience.",
+};
+
+const withOptionExplanations = (questions) =>
+  questions.map((question) => ({
+    ...question,
+    options: question.options.map((option) => ({
+      ...option,
+      explanation:
+        option.explanation ||
+        optionExplanations[`${question.sortOrder}:${option.value}`] ||
+        "This answer may reflect a current inner pattern. In Sahajayoga, such patterns are best understood through calm meditation, vibrations, and honest self-observation.",
+    })),
+  }));
+
+const rawQuestionsSeed = [
   {
     sortOrder: 1,
     category: "vibration",
@@ -238,3 +342,5 @@ export const questionsSeed = [
     ],
   },
 ];
+
+export const questionsSeed = withOptionExplanations(rawQuestionsSeed);

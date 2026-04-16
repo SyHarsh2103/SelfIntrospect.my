@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
-  AlertTriangle,
   ArrowRight,
   CheckCircle2,
+  CircleDot,
   ClipboardList,
   Loader2,
+  Mail,
+  Phone,
   RotateCcw,
+  Sparkles,
+  UserRound,
+  X,
 } from "lucide-react";
 
 import PageShell from "../components/common/PageShell";
@@ -14,41 +19,34 @@ import DisclaimerBox from "../components/common/DisclaimerBox";
 import { publicApi } from "../services/api";
 import { useQuestionnaire } from "../context/QuestionnaireContext";
 
-const generalGuidance = [
-  "Raise Kundalini and give yourself a bandhan.",
-  "Footsoak for 10–15 minutes with salt water.",
-  "Sit for meditation with attention on Sahasrara.",
-];
+const chakraLabels = {
+  mooladhara: "Mooladhara Chakra",
+  swadhisthana: "Swadhisthana Chakra",
+  nabhi: "Nabhi Chakra",
+  void: "Void",
+  heart: "Heart Chakra",
+  vishuddhi: "Vishuddhi Chakra",
+  agnya: "Agnya Chakra",
+  sahasrara: "Sahasrara Chakra",
+};
 
-const chakraFallback = [
-  { key: "mooladhara", label: "Mooladhara Chakra" },
-  { key: "swadhisthana", label: "Swadhisthana Chakra" },
-  { key: "nabhi", label: "Nabhi Chakra" },
-  { key: "void", label: "Void" },
-  { key: "heart", label: "Heart Chakra" },
-  { key: "vishuddhi", label: "Vishuddhi Chakra" },
-  { key: "agnya", label: "Agnya Chakra" },
-  { key: "sahasrara", label: "Sahasrara Chakra" },
-];
+const nadiLabels = {
+  leftNadi: "Left Channel / Ida Nadi",
+  rightNadi: "Right Channel / Pingala Nadi",
+  centerNadi: "Center Channel / Sushumna Nadi",
+};
 
-const nadiFallback = [
-  { key: "leftNadi", label: "Left Channel / Ida Nadi" },
-  { key: "rightNadi", label: "Right Channel / Pingala Nadi" },
-  { key: "centerNadi", label: "Center Channel / Sushumna Nadi" },
-];
+const defaultUserForm = {
+  name: "",
+  phone: "",
+  email: "",
+};
 
-const keywordMap = {
-  mooladhara: ["mooladhara", "ganesha", "grounding", "innocence"],
-  swadhisthana: ["swadhisthana", "saraswati", "attention", "creativity"],
-  nabhi: ["nabhi", "lakshmi", "narayana", "satisfaction"],
-  void: ["void", "guru", "dattatreya", "dharma"],
-  heart: ["heart", "jagadamba", "confidence", "security"],
-  vishuddhi: ["vishuddhi", "krishna", "witness", "guilt"],
-  agnya: ["agnya", "forgiveness", "forgive"],
-  sahasrara: ["sahasrara", "mahamaya", "connection", "silence"],
-  leftNadi: ["left", "ida", "left channel", "heaviness", "past"],
-  rightNadi: ["right", "pingala", "right channel", "cooling", "heat"],
-  centerNadi: ["center", "sushumna", "center channel", "steadiness", "balance"],
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+const isValidPhone = (phone) => {
+  const cleaned = phone.replace(/[^\d+]/g, "");
+  return cleaned.length >= 8;
 };
 
 const getContentSafely = async (key, fallback = "") => {
@@ -60,334 +58,217 @@ const getContentSafely = async (key, fallback = "") => {
   }
 };
 
-const getStatus = (score = 0) => {
-  if (score <= 0) {
-    return {
-      label: "Balanced",
-      className: "text-emerald-700 bg-emerald-50 border-emerald-100",
-      bar: "bg-emerald-500",
-    };
-  }
+const formatLabel = (key = "") => {
+  if (!key) return "";
 
-  if (score <= 2) {
-    return {
-      label: "Mild Attention",
-      className: "text-sky-700 bg-sky-50 border-sky-100",
-      bar: "bg-sky-500",
-    };
-  }
-
-  if (score <= 5) {
-    return {
-      label: "Need to Work",
-      className: "text-amber-700 bg-amber-50 border-amber-100",
-      bar: "bg-amber-500",
-    };
-  }
-
-  return {
-    label: "Strong Attention",
-    className: "text-orange-700 bg-orange-50 border-orange-100",
-    bar: "bg-orange-600",
-  };
+  return String(key)
+    .replace(/([A-Z])/g, " $1")
+    .replace(/[-_]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^\w/, (char) => char.toUpperCase());
 };
 
-const normalizeRanking = (ranking = [], fallback = []) => {
-  const rankingMap = new Map(
-    ranking.map((item) => [
-      item.key || item.name || item.label,
-      {
-        ...item,
-        key: item.key || item.name || item.label,
-        label: item.label || item.displayName || item.name,
-        score: Number(item.score || 0),
-      },
-    ])
-  );
-
-  return fallback
-    .map((item) => {
-      const found = rankingMap.get(item.key);
-      const score = Number(found?.score || 0);
-      const status = getStatus(score);
-
-      return {
-        ...item,
-        ...found,
-        key: item.key,
-        label: found?.label || item.label,
-        score,
-        status: found?.status || status.label,
-        statusClassName: status.className,
-        barColor: status.bar,
-      };
-    })
+const getScoreEntries = (scores = {}, labelMap = {}) => {
+  return Object.entries(scores || {})
+    .map(([key, value]) => ({
+      key,
+      label: labelMap[key] || formatLabel(key),
+      score: Number(value || 0),
+    }))
+    .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score);
 };
 
-function normalizeResultItems(primaryList, fallbackList) {
-  if (Array.isArray(primaryList) && primaryList.length) {
-    return primaryList.filter((item) => item && typeof item === "object");
+const getSelectedOptionText = (answer = {}) => {
+  if (Array.isArray(answer.selectedOptions) && answer.selectedOptions.length) {
+    return answer.selectedOptions
+      .map((option) => option?.label || option?.value)
+      .filter(Boolean)
+      .join(", ");
   }
 
-  if (Array.isArray(fallbackList) && fallbackList.length) {
-    return fallbackList.filter((item) => item && typeof item === "object");
+  if (Array.isArray(answer.options) && answer.options.length) {
+    return answer.options
+      .map((option) => option?.label || option?.value)
+      .filter(Boolean)
+      .join(", ");
   }
+
+  if (
+    Array.isArray(answer.selectedOptionLabels) &&
+    answer.selectedOptionLabels.length
+  ) {
+    return answer.selectedOptionLabels.join(", ");
+  }
+
+  if (answer.selectedOptionLabel) return answer.selectedOptionLabel;
+
+  if (answer.intensityLevel) {
+    return `Intensity level ${answer.intensityLevel}`;
+  }
+
+  return "Selected response recorded";
+};
+
+const getQuestionText = (answer = {}, index) => {
+  return (
+    answer.questionText ||
+    answer.question?.questionText ||
+    answer.question?.text ||
+    answer.questionId?.questionText ||
+    `Question ${index + 1}`
+  );
+};
+
+const collectScoresFromAnswer = (answer = {}) => {
+  const selectedOptions = [
+    ...(Array.isArray(answer.selectedOptions) ? answer.selectedOptions : []),
+    ...(Array.isArray(answer.options) ? answer.options : []),
+  ];
+
+  const chakraScores = {};
+  const nadiScores = {};
+
+  selectedOptions.forEach((option) => {
+    Object.entries(option?.chakraScores || {}).forEach(([key, value]) => {
+      chakraScores[key] = Number(chakraScores[key] || 0) + Number(value || 0);
+    });
+
+    Object.entries(option?.nadiScores || {}).forEach(([key, value]) => {
+      nadiScores[key] = Number(nadiScores[key] || 0) + Number(value || 0);
+    });
+  });
+
+  return { chakraScores, nadiScores };
+};
+
+const getReflectionText = (answer = {}) => {
+  const selectedOptions = [
+    ...(Array.isArray(answer.selectedOptions) ? answer.selectedOptions : []),
+    ...(Array.isArray(answer.options) ? answer.options : []),
+  ];
+
+  const optionExplanations = selectedOptions
+    .map(
+      (option) =>
+        option?.explanation || option?.reflection || option?.description
+    )
+    .filter(Boolean);
+
+  if (optionExplanations.length) {
+    return optionExplanations.join(" ");
+  }
+
+  const { chakraScores, nadiScores } = collectScoresFromAnswer(answer);
+
+  const chakraAreas = getScoreEntries(chakraScores, chakraLabels)
+    .slice(0, 2)
+    .map((item) => item.label);
+
+  const nadiAreas = getScoreEntries(nadiScores, nadiLabels)
+    .slice(0, 2)
+    .map((item) => item.label);
+
+  if (chakraAreas.length || nadiAreas.length) {
+    const parts = [];
+
+    if (chakraAreas.length) parts.push(chakraAreas.join(" and "));
+    if (nadiAreas.length) parts.push(nadiAreas.join(" and "));
+
+    return `This answer may point toward ${parts.join(", ")}. Treat this as a gentle observation, not a final conclusion.`;
+  }
+
+  return "This answer may reflect a present inner tendency. Observe it gently through meditation, vibrations, and honest self-introspection.";
+};
+
+const getDetailedAnswers = (result = {}) => {
+  const possibleLists = [
+    result.answersDetailed,
+    result.answerDetails,
+    result.detailedAnswers,
+    result.populatedAnswers,
+  ];
+
+  const found = possibleLists.find((list) => Array.isArray(list) && list.length);
+
+  if (found) return found;
+  if (Array.isArray(result.answers) && result.answers.length) return result.answers;
 
   return [];
-}
-
-const stringifySearchable = (item) => {
-  if (!item || typeof item !== "object") return "";
-
-  return [
-    item.title,
-    item.notes,
-    item.usageNotes,
-    item.mantraText,
-    item.phoneticText,
-    item.chakraId?.name,
-    item.chakraId?.displayName,
-    ...(Array.isArray(item.chakraIds)
-      ? item.chakraIds.map(
-          (chakra) => chakra?.name || chakra?.displayName || chakra
-        )
-      : []),
-    ...(Array.isArray(item.nadiIds)
-      ? item.nadiIds.map((nadi) => nadi?.name || nadi?.displayName || nadi)
-      : []),
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
 };
-
-const itemMatchesFinding = (item, finding) => {
-  const searchable = stringifySearchable(item);
-  const keywords = keywordMap[finding.key] || [finding.key, finding.label];
-
-  return keywords.some((keyword) =>
-    searchable.includes(String(keyword).toLowerCase())
-  );
-};
-
-function ReportPill({ children, className = "" }) {
-  return (
-    <span
-      className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${className}`}
-    >
-      {children}
-    </span>
-  );
-}
 
 function ReportTableRow({ label, value }) {
   return (
-    <div className="grid gap-1 border-b border-slate-100 py-3 last:border-b-0 sm:grid-cols-[180px_1fr]">
-      <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+    <div className="grid gap-1 border-b border-slate-100 py-2 last:border-b-0 sm:grid-cols-[120px_1fr]">
+      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
         {label}
       </p>
-      <p className="break-words text-sm font-semibold leading-6 text-slate-800">
+      <p className="break-words text-xs font-semibold leading-5 text-slate-800 sm:text-sm">
         {value || "—"}
       </p>
     </div>
   );
 }
 
-function RemedyReport({ remedies }) {
-  if (!remedies.length) {
-    return (
-      <p className="text-sm leading-7 text-slate-600">
-        No specific remedy is linked to this finding yet. Follow the general
-        cleansing recommendation below.
-      </p>
-    );
-  }
+function ReflectionItem({ answer, index }) {
+  const questionText = getQuestionText(answer, index);
+  const selectedText = getSelectedOptionText(answer);
+  const reflectionText = getReflectionText(answer);
 
   return (
-    <div className="space-y-5">
-      {remedies.map((remedy, remedyIndex) => (
-        <div
-          key={remedy._id || remedy.title}
-          className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-        >
-          <p className="font-serif text-xl font-bold text-slate-900">
-            {remedyIndex + 1}. {remedy.title}
-          </p>
-
-          {remedy.duration ? (
-            <p className="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-orange-700">
-              Duration: {remedy.duration}
-            </p>
-          ) : null}
-
-          {Array.isArray(remedy.steps) && remedy.steps.length > 0 ? (
-            <ol className="mt-3 space-y-2 pl-5 text-sm leading-7 text-slate-700">
-              {remedy.steps.map((step, index) => (
-                <li key={`${remedy.title}-${index}`} className="list-decimal">
-                  {step}
-                </li>
-              ))}
-            </ol>
-          ) : null}
-
-          {remedy.notes ? (
-            <p className="mt-3 rounded-xl bg-white px-3 py-2 text-sm leading-6 text-slate-600">
-              {remedy.notes}
-            </p>
-          ) : null}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function MantraReport({ mantras }) {
-  if (!mantras.length) {
-    return (
-      <p className="text-sm leading-7 text-slate-600">
-        No mantra is linked to this chakra yet.
-      </p>
-    );
-  }
-
-  return (
-    <div className="space-y-5">
-      {mantras.map((mantra, mantraIndex) => (
-        <div
-          key={mantra._id || mantra.title}
-          className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-        >
-          <p className="font-serif text-xl font-bold text-slate-900">
-            {mantraIndex + 1}. {mantra.title}
-          </p>
-          <p className="mt-3 rounded-xl bg-white px-4 py-3 text-sm font-semibold leading-7 text-slate-800">
-            {mantra.mantraText}
-          </p>
-          {mantra.phoneticText ? (
-            <p className="mt-3 text-sm leading-7 text-slate-600">
-              <strong>Pronunciation:</strong> {mantra.phoneticText}
-            </p>
-          ) : null}
-          {mantra.repetitions ? (
-            <p className="mt-2 text-sm leading-7 text-slate-600">
-              <strong>Repetition:</strong> {mantra.repetitions}
-            </p>
-          ) : null}
-          {mantra.usageNotes ? (
-            <p className="mt-2 text-sm leading-7 text-slate-600">
-              <strong>Usage:</strong> {mantra.usageNotes}
-            </p>
-          ) : null}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function FindingReportSection({
-  item,
-  maxScore,
-  index,
-  type,
-  remedies = [],
-  mantras = [],
-}) {
-  const percentage =
-    maxScore > 0 ? Math.min((item.score / maxScore) * 100, 100) : 0;
-  const isChakra = type === "chakra";
-
-  return (
-    <section className="border-t border-slate-200 py-8 first:border-t-0 first:pt-0">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.22em] text-orange-700">
-            Section {index + 1} · {isChakra ? "Chakra Finding" : "Nadi Finding"}
-          </p>
-          <h2 className="mt-2 font-serif text-3xl font-bold text-slate-950">
-            {item.label}
-          </h2>
-          <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-600">
-            This {isChakra ? "chakra" : "channel"} appeared in the answer
-            pattern and is shown because it has a positive attention score.
-            Balanced areas are intentionally hidden from this report.
-          </p>
+    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex items-start gap-3">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-50 text-xs font-bold text-orange-700">
+          {index + 1}
         </div>
 
-        <ReportPill className={item.statusClassName}>{item.status}</ReportPill>
-      </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-orange-700">
+            Reflection
+          </p>
 
-      <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4">
-        <ReportTableRow label="Attention score" value={item.score} />
-        <ReportTableRow label="Status" value={item.status} />
-        <ReportTableRow
-          label="Category"
-          value={isChakra ? "Chakra" : "Nadi / Channel"}
-        />
-
-        <div className="mt-4">
-          <div className="mb-2 flex items-center justify-between text-xs font-semibold text-slate-500">
-            <span>Relative attention level</span>
-            <span>{Math.round(percentage)}%</span>
-          </div>
-          <div className="h-3 overflow-hidden rounded-full bg-slate-100">
-            <div
-              className={`h-full rounded-full ${item.barColor}`}
-              style={{ width: `${percentage}%` }}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-7 grid gap-7 lg:grid-cols-2">
-        <div>
-          <h3 className="border-b border-slate-200 pb-2 font-serif text-2xl font-bold text-slate-900">
-            Recommended Remedies
+          <h3 className="mt-1 font-serif text-lg font-bold leading-snug text-slate-950 sm:text-xl">
+            {questionText}
           </h3>
-          <div className="mt-4">
-            <RemedyReport remedies={remedies} />
-          </div>
-        </div>
 
-        {isChakra ? (
-          <div>
-            <h3 className="border-b border-slate-200 pb-2 font-serif text-2xl font-bold text-slate-900">
-              Mantra Support
-            </h3>
-            <div className="mt-4">
-              <MantraReport mantras={mantras} />
+          <div className="mt-3 grid gap-3 lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="rounded-2xl border border-orange-100 bg-orange-50 px-4 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-orange-700">
+                Selected answer
+              </p>
+              <p className="mt-1 text-xs font-semibold leading-6 text-slate-800 sm:text-sm">
+                {selectedText}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                Reflection note
+              </p>
+              <p className="mt-1 text-xs leading-6 text-slate-700 sm:text-sm">
+                {reflectionText}
+              </p>
             </div>
           </div>
-        ) : (
-          <div>
-            <h3 className="border-b border-slate-200 pb-2 font-serif text-2xl font-bold text-slate-900">
-              Channel Guidance
-            </h3>
-            <p className="mt-4 text-sm leading-7 text-slate-600">
-              For channel imbalance, start with the recommended remedy and
-              general cleansing practice. Mantra support is shown mainly under
-              the chakra sections.
-            </p>
-          </div>
-        )}
+        </div>
       </div>
     </section>
   );
 }
 
-function EmptyBalancedReport() {
+function EmptyReflectionReport() {
   return (
-    <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
+    <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 sm:p-5">
       <div className="flex items-start gap-3">
-        <CheckCircle2 className="mt-1 text-emerald-700" size={22} />
+        <CheckCircle2 className="mt-1 shrink-0 text-emerald-700" size={20} />
         <div>
-          <h2 className="font-serif text-2xl font-bold text-slate-900">
-            No strong problem area detected
+          <h2 className="font-serif text-xl font-bold text-slate-900">
+            Detailed reflection is not available
           </h2>
-          <p className="mt-3 text-sm leading-7 text-slate-700">
-            Your selected answers did not show a specific chakra or channel that
-            needs focused attention. Continue with regular meditation and general
-            cleansing.
+          <p className="mt-2 text-xs leading-6 text-slate-700 sm:text-sm">
+            Your report was generated successfully, but the server did not return
+            question-wise answer details yet.
           </p>
         </div>
       </div>
@@ -397,14 +278,19 @@ function EmptyBalancedReport() {
 
 export default function ResultPage() {
   const { sessionId } = useParams();
+  const navigate = useNavigate();
   const { resetAnswers } = useQuestionnaire();
 
   const [result, setResult] = useState(null);
   const [disclaimer, setDisclaimer] = useState("");
   const [finalGuidance, setFinalGuidance] = useState("");
-  const [inconclusiveGuidance, setInconclusiveGuidance] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const [showUserForm, setShowUserForm] = useState(false);
+  const [savingUserInfo, setSavingUserInfo] = useState(false);
+  const [userForm, setUserForm] = useState(defaultUserForm);
+  const [userFormError, setUserFormError] = useState("");
 
   useEffect(() => {
     const loadResult = async () => {
@@ -414,31 +300,25 @@ export default function ResultPage() {
 
         const resultData = await publicApi.getResult(sessionId);
 
-        const [shortDisclaimer, finalBlock, inconclusiveBlock] =
-          await Promise.all([
-            getContentSafely(
-              "shortDisclaimer",
-              "This result is based on your selected answers and may not always be fully accurate. For deeper and proper guidance, please connect with experienced Sahajayogis."
-            ),
-            getContentSafely(
-              "finalGuidance",
-              "Please use this as gentle supportive guidance only. Regular meditation, footsoak, Kundalini raising, and connection with experienced Sahajayogis may help you understand more clearly."
-            ),
-            getContentSafely(
-              "inconclusiveGuidance",
-              "Your answers show a mixed pattern. General cleansing, daily meditation, and direct guidance from experienced Sahajayogis may be the best next step."
-            ),
-          ]);
+        const [shortDisclaimer, finalBlock] = await Promise.all([
+          getContentSafely(
+            "shortDisclaimer",
+            "This report is based only on your selected answers and may not always be fully accurate. For deeper clarity, please connect with experienced Sahajayogis."
+          ),
+          getContentSafely(
+            "finalGuidance",
+            "Please use this as gentle self-reflection only. Regular Sahajayoga meditation, thoughtless awareness, and connection with experienced Sahajayogis may help you observe your inner state more clearly."
+          ),
+        ]);
 
         setResult(resultData);
         setDisclaimer(shortDisclaimer);
         setFinalGuidance(finalBlock);
-        setInconclusiveGuidance(inconclusiveBlock);
       } catch (err) {
         setError(
           err?.response?.data?.message ||
             err?.message ||
-            "Unable to load your result."
+            "Unable to load your report."
         );
       } finally {
         setLoading(false);
@@ -448,25 +328,92 @@ export default function ResultPage() {
     if (sessionId) loadResult();
   }, [sessionId]);
 
-  const chakraAnalysis = useMemo(
-    () => normalizeRanking(result?.chakraRanking || [], chakraFallback),
+  const detailedAnswers = useMemo(
+    () => getDetailedAnswers(result || {}),
     [result]
   );
 
-  const nadiAnalysis = useMemo(
-    () => normalizeRanking(result?.nadiRanking || [], nadiFallback),
-    [result]
-  );
+  const validateUserForm = () => {
+    const name = userForm.name.trim();
+    const phone = userForm.phone.trim();
+    const email = userForm.email.trim();
+
+    if (!name || name.length < 2) return "Please enter a valid full name.";
+    if (!phone || !isValidPhone(phone)) return "Please enter a valid phone number.";
+    if (!email || !isValidEmail(email)) return "Please enter a valid email ID.";
+
+    return "";
+  };
+
+  const openGuidanceFlow = () => {
+    setUserFormError("");
+
+    setUserForm({
+      name: result?.userInfo?.name || "",
+      phone: result?.userInfo?.phone || "",
+      email: result?.userInfo?.email || "",
+    });
+
+    setShowUserForm(true);
+  };
+
+  const handleSaveUserInfo = async () => {
+    const validationError = validateUserForm();
+
+    if (validationError) {
+      setUserFormError(validationError);
+      return;
+    }
+
+    try {
+      setSavingUserInfo(true);
+      setUserFormError("");
+
+      const payload = {
+        userInfo: {
+          name: userForm.name.trim(),
+          phone: userForm.phone.trim(),
+          email: userForm.email.trim().toLowerCase(),
+        },
+      };
+
+      const response = await publicApi.updateResultUserInfo(sessionId, payload);
+
+      setResult((prev) => ({
+        ...prev,
+        userInfo: response?.userInfo || payload.userInfo,
+        hasUserInfo: true,
+      }));
+
+      setShowUserForm(false);
+      navigate(`/result/${sessionId}/guidance`);
+    } catch (err) {
+      setUserFormError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Unable to save your details. Please try again."
+      );
+    } finally {
+      setSavingUserInfo(false);
+    }
+  };
 
   if (loading) {
     return (
       <PageShell title="Preparing your report">
-        <div className="mx-auto max-w-3xl rounded-3xl border border-orange-100 bg-white p-8 shadow-sm">
-          <div className="flex items-center gap-3 text-slate-600">
-            <Loader2 className="animate-spin text-orange-600" size={22} />
-            <p className="text-sm font-semibold">
-              Generating professional report...
-            </p>
+        <div className="mx-auto max-w-2xl rounded-3xl border border-orange-100 bg-white p-5 shadow-sm sm:p-7">
+          <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:text-left">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50">
+              <Loader2 className="animate-spin text-orange-600" size={22} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-slate-800">
+                Preparing report...
+              </p>
+              <p className="mt-1 text-xs leading-5 text-slate-500 sm:text-sm">
+                Generating your answer-based self-introspection summary.
+              </p>
+            </div>
           </div>
         </div>
       </PageShell>
@@ -475,17 +422,17 @@ export default function ResultPage() {
 
   if (error || !result) {
     return (
-      <PageShell title="Result not available">
-        <div className="rounded-3xl border border-red-100 bg-white p-8 shadow-sm">
+      <PageShell title="Report not available">
+        <div className="mx-auto max-w-3xl rounded-3xl border border-red-100 bg-white p-5 shadow-sm sm:p-8">
           <p className="text-sm leading-7 text-red-700">
-            {error || "No result was found for this session."}
+            {error || "No report was found for this session."}
           </p>
 
           <div className="mt-5">
             <Link
               to="/questionnaire"
               onClick={resetAnswers}
-              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-orange-600 to-amber-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-orange-200 transition hover:-translate-y-0.5 hover:shadow-xl"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-orange-600 to-amber-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-orange-200 transition hover:-translate-y-0.5 hover:shadow-xl sm:w-auto"
             >
               <RotateCcw size={17} />
               Retake questionnaire
@@ -496,193 +443,325 @@ export default function ResultPage() {
     );
   }
 
-  const remedies = normalizeResultItems(result.remedies, result.remedyIds);
-  const mantras = normalizeResultItems(result.mantras, result.mantraIds);
-
-  const isInconclusive =
-    String(result.confidence || "").toLowerCase() === "inconclusive";
-
-  const problemChakras = chakraAnalysis.filter((item) => item.score > 0);
-  const problemNadis = nadiAnalysis.filter((item) => item.score > 0);
-  const topChakra = problemChakras[0];
-  const topNadi = problemNadis[0];
-
-  const maxChakraScore = Math.max(
-    ...problemChakras.map((item) => item.score),
-    1
-  );
-  const maxNadiScore = Math.max(...problemNadis.map((item) => item.score), 1);
-  const hasProblems = problemChakras.length > 0 || problemNadis.length > 0;
-
-  const personName = result?.userInfo?.name || "Seeker";
-  const personEmail = result?.userInfo?.email || "";
-  const personPhone = result?.userInfo?.phone || "";
-
   return (
     <PageShell
       title="Self Introspection Report"
-      subtitle="Professional one-page style report with only detected areas."
+      subtitle="A concise answer-based reflection. Remedies and mantras are available on the guidance page."
       actions={
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="grid w-full gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-3">
+          <button
+            type="button"
+            onClick={openGuidanceFlow}
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-orange-600 to-amber-500 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-orange-200 transition hover:-translate-y-0.5 hover:shadow-xl sm:px-6 sm:py-3 sm:text-sm"
+          >
+            View Guidance
+            <ArrowRight size={16} />
+          </button>
+
           <Link
             to="/questionnaire"
             onClick={resetAnswers}
-            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-orange-600 to-amber-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-orange-200 transition hover:-translate-y-0.5 hover:shadow-xl"
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-orange-200 bg-white px-5 py-2.5 text-xs font-bold text-orange-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-orange-50 sm:px-6 sm:py-3 sm:text-sm"
           >
-            <RotateCcw size={17} />
+            <RotateCcw size={16} />
             Retake
-          </Link>
-
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-white px-6 py-3 text-sm font-bold text-orange-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-orange-50"
-          >
-            Go home
-            <ArrowRight size={17} />
           </Link>
         </div>
       }
     >
-      <article className="mx-auto max-w-5xl rounded-[34px] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/70 sm:p-8 lg:p-10">
-        <header className="border-b border-slate-200 pb-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-orange-700">
-                <ClipboardList size={15} />
-                Sahajayoga Self Introspection Report
+      <article className="mx-auto max-w-5xl rounded-[26px] border border-slate-200 bg-white p-4 shadow-xl shadow-slate-200/60 sm:rounded-[34px] sm:p-7 lg:p-8">
+        <header className="border-b border-slate-200 pb-5 sm:pb-6">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-orange-700 sm:px-4 sm:tracking-[0.18em]">
+                <ClipboardList size={14} className="shrink-0" />
+                <span className="truncate">Sahajayoga Report</span>
               </div>
 
-              <p className="mt-5 text-sm font-bold uppercase tracking-[0.18em] text-slate-500">
-                Prepared for
-              </p>
-
-              <h1 className="mt-2 font-serif text-4xl font-bold leading-tight text-slate-950">
-                {personName}
+              <h1 className="mt-4 font-serif text-2xl font-bold leading-tight text-slate-950 sm:text-3xl lg:text-4xl">
+                Answer-Based Imbalance Reflection
               </h1>
 
-              <p className="mt-3 font-serif text-2xl font-bold text-orange-700">
-                {hasProblems
-                  ? "Focused Areas Requiring Attention"
-                  : "No Strong Problem Area Detected"}
-              </p>
-
-              <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600">
-                This report is prepared for {personName} from the selected
-                answers. Balanced chakras and nadis are hidden so the report
-                stays focused, clean, and practical.
+              <p className="mt-3 max-w-3xl text-xs leading-6 text-slate-600 sm:text-sm sm:leading-7">
+                This professional report summarizes possible patterns reflected
+                by your selected answers. It is supportive guidance only and not
+                a final spiritual assessment.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 lg:min-w-[260px]">
+            <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:max-w-xs sm:p-4">
               <ReportTableRow label="Clarity" value={result.confidence || "—"} />
-              <ReportTableRow
-                label="Chakra findings"
-                value={problemChakras.length}
-              />
-              <ReportTableRow label="Nadi findings" value={problemNadis.length} />
+              {/* <ReportTableRow
+                label="Session"
+                value={sessionId ? `${sessionId.slice(0, 8)}...` : "—"}
+              /> */}
             </div>
           </div>
         </header>
 
-        <section className="grid gap-4 border-b border-slate-200 py-6 md:grid-cols-2">
-          <div className="rounded-2xl bg-orange-50 p-4">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-orange-700">
-              Highest Chakra Finding
-            </p>
-            <p className="mt-2 font-serif text-2xl font-bold text-slate-950">
-              {topChakra?.label || "None"}
-            </p>
-          </div>
-
-          <div className="rounded-2xl bg-emerald-50 p-4">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">
-              Highest Nadi Finding
-            </p>
-            <p className="mt-2 font-serif text-2xl font-bold text-slate-950">
-              {topNadi?.label || "None"}
-            </p>
-          </div>
-        </section>
-
-        {isInconclusive && (
-          <section className="border-b border-slate-200 py-6">
-            <div className="rounded-2xl border border-amber-100 bg-amber-50 p-5">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="mt-1 text-amber-700" size={22} />
-                <div>
-                  <h2 className="font-serif text-2xl font-bold text-slate-900">
-                    Mixed Pattern Guidance
-                  </h2>
-                  <p className="mt-3 text-sm leading-7 text-slate-700">
-                    {inconclusiveGuidance}
-                  </p>
-                </div>
+        <section className="border-b border-slate-200 py-5 sm:py-6">
+          <div className="rounded-3xl bg-gradient-to-br from-orange-50 via-white to-emerald-50 p-4 sm:p-5">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-orange-600 shadow-sm">
+                <Sparkles size={20} />
+              </div>
+              <div>
+                <h2 className="font-serif text-xl font-bold text-slate-950 sm:text-2xl">
+                  Executive Summary
+                </h2>
+                <p className="mt-2 text-xs leading-6 text-slate-700 sm:text-sm sm:leading-7">
+                  Your answers may reflect patterns connected with attention,
+                  emotions, thoughts, habits, or inner sensitivity. In
+                  Sahajayoga, these patterns are best observed calmly through
+                  meditation, vibrations, and self-awareness.
+                </p>
               </div>
             </div>
-          </section>
-        )}
-
-        {!hasProblems ? (
-          <section className="py-8">
-            <EmptyBalancedReport />
-          </section>
-        ) : (
-          <>
-            {problemChakras.map((item, index) => (
-              <FindingReportSection
-                key={item.key}
-                item={item}
-                index={index}
-                maxScore={maxChakraScore}
-                type="chakra"
-                remedies={remedies.filter((remedy) =>
-                  itemMatchesFinding(remedy, item)
-                )}
-                mantras={mantras.filter((mantra) =>
-                  itemMatchesFinding(mantra, item)
-                )}
-              />
-            ))}
-
-            {problemNadis.map((item, index) => (
-              <FindingReportSection
-                key={item.key}
-                item={item}
-                index={index}
-                maxScore={maxNadiScore}
-                type="nadi"
-                remedies={remedies.filter((remedy) =>
-                  itemMatchesFinding(remedy, item)
-                )}
-              />
-            ))}
-          </>
-        )}
-
-        <section className="border-t border-slate-200 py-8">
-          <h2 className="font-serif text-3xl font-bold text-slate-950">
-            General Cleansing Recommendation
-          </h2>
-          <ol className="mt-4 space-y-3 pl-5 text-sm leading-7 text-slate-700">
-            {generalGuidance.map((item) => (
-              <li key={item} className="list-decimal">
-                {item}
-              </li>
-            ))}
-          </ol>
+          </div>
         </section>
 
-        <section className="border-t border-slate-200 py-8">
-          <h2 className="font-serif text-3xl font-bold text-slate-950">
+        <section className="py-5 sm:py-6">
+          <div className="mb-4 sm:mb-5">
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-orange-700">
+              Question-wise report
+            </p>
+            <h2 className="mt-1 font-serif text-2xl font-bold text-slate-950 sm:text-3xl">
+              Selected Answers & Reflection
+            </h2>
+          </div>
+
+          {detailedAnswers.length ? (
+            <div className="space-y-4">
+              {detailedAnswers.map((answer, index) => (
+                <ReflectionItem
+                  key={answer._id || answer.questionId || index}
+                  answer={answer}
+                  index={index}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyReflectionReport />
+          )}
+        </section>
+
+        <section className="grid gap-4 border-t border-slate-200 py-5 sm:py-6 lg:grid-cols-2">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+            <h2 className="font-serif text-xl font-bold text-slate-950 sm:text-2xl">
+              Meditation Support
+            </h2>
+            <p className="mt-2 text-xs leading-6 text-slate-700 sm:text-sm sm:leading-7">
+              Sahajayoga meditation may support deeper awareness through silence,
+              thoughtless attention, and vibration-based observation.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-orange-100 bg-orange-50 p-4 sm:p-5">
+            <h2 className="font-serif text-xl font-bold text-slate-950 sm:text-2xl">
+              Next Step
+            </h2>
+            <p className="mt-2 text-xs leading-6 text-slate-700 sm:text-sm sm:leading-7">
+              Continue to the guidance page to view practical remedies and
+              mantra suggestions based on this result.
+            </p>
+            <button
+              type="button"
+              onClick={openGuidanceFlow}
+              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-orange-600 to-amber-500 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-orange-200 transition hover:-translate-y-0.5 hover:shadow-xl sm:w-auto sm:text-sm"
+            >
+              View Guidance
+              <ArrowRight size={16} />
+            </button>
+          </div>
+        </section>
+
+        <section className="border-t border-slate-200 py-5 sm:py-6">
+          <h2 className="font-serif text-xl font-bold text-slate-950 sm:text-2xl">
             Final Note
           </h2>
-          <p className="mt-4 text-sm leading-8 text-slate-700">
+          <p className="mt-2 text-xs leading-6 text-slate-700 sm:text-sm sm:leading-7">
             {finalGuidance}
           </p>
         </section>
 
         <DisclaimerBox short content={disclaimer} />
       </article>
+
+      {showUserForm && (
+        <div className="fixed inset-0 z-[99999] flex items-end justify-center bg-slate-950/70 px-0 py-0 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6">
+          <div className="flex h-[92dvh] w-full flex-col overflow-hidden rounded-t-[30px] bg-white shadow-2xl shadow-slate-950/30 sm:h-auto sm:max-h-[92vh] sm:max-w-xl sm:rounded-[34px]">
+            <div className="relative shrink-0 border-b border-orange-100 bg-gradient-to-br from-orange-50 via-white to-emerald-50 px-4 pb-4 pt-5 sm:px-6 sm:pb-5 sm:pt-6">
+              <button
+                type="button"
+                disabled={savingUserInfo}
+                onClick={() => {
+                  setShowUserForm(false);
+                  setUserFormError("");
+                }}
+                className="absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="Close details form"
+              >
+                <X size={18} />
+              </button>
+
+              <div className="inline-flex max-w-[calc(100%-3rem)] items-center gap-2 rounded-full bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-orange-700 shadow-sm sm:px-4 sm:text-xs sm:tracking-[0.16em]">
+                <ClipboardList size={15} className="shrink-0" />
+                <span className="truncate">Before Guidance Page</span>
+              </div>
+
+              <h2 className="mt-4 pr-12 font-serif text-2xl font-bold leading-tight text-slate-950 sm:text-3xl">
+                Please fill your details
+              </h2>
+
+              <p className="mt-2 pr-2 text-sm leading-6 text-slate-600 sm:leading-7">
+                Your report is ready. Please share your details before opening
+                the remedies and mantras guidance page.
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+              {userFormError && (
+                <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm leading-6 text-red-700">
+                  {userFormError}
+                </div>
+              )}
+
+              <form
+                id="guidance-user-details-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  handleSaveUserInfo();
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label className="mb-2 block text-sm font-bold text-slate-700">
+                    Full Name
+                  </label>
+                  <div className="relative">
+                    <UserRound
+                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                      size={18}
+                    />
+                    <input
+                      type="text"
+                      value={userForm.name}
+                      onChange={(event) => {
+                        setUserForm((prev) => ({
+                          ...prev,
+                          name: event.target.value,
+                        }));
+                        setUserFormError("");
+                      }}
+                      required
+                      placeholder="Enter your full name"
+                      className="h-12 w-full rounded-2xl border border-orange-100 bg-white pl-11 pr-4 text-base outline-none transition placeholder:text-sm focus:border-orange-400 focus:ring-4 focus:ring-orange-100 sm:text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-bold text-slate-700">
+                    Phone Number
+                  </label>
+                  <div className="relative">
+                    <Phone
+                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                      size={18}
+                    />
+                    <input
+                      type="tel"
+                      inputMode="tel"
+                      value={userForm.phone}
+                      onChange={(event) => {
+                        setUserForm((prev) => ({
+                          ...prev,
+                          phone: event.target.value,
+                        }));
+                        setUserFormError("");
+                      }}
+                      required
+                      placeholder="Enter your phone number"
+                      className="h-12 w-full rounded-2xl border border-orange-100 bg-white pl-11 pr-4 text-base outline-none transition placeholder:text-sm focus:border-orange-400 focus:ring-4 focus:ring-orange-100 sm:text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-bold text-slate-700">
+                    Email ID
+                  </label>
+                  <div className="relative">
+                    <Mail
+                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                      size={18}
+                    />
+                    <input
+                      type="email"
+                      inputMode="email"
+                      value={userForm.email}
+                      onChange={(event) => {
+                        setUserForm((prev) => ({
+                          ...prev,
+                          email: event.target.value,
+                        }));
+                        setUserFormError("");
+                      }}
+                      required
+                      placeholder="Enter your email ID"
+                      className="h-12 w-full rounded-2xl border border-orange-100 bg-white pl-11 pr-4 text-base outline-none transition placeholder:text-sm focus:border-orange-400 focus:ring-4 focus:ring-orange-100 sm:text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 rounded-2xl bg-orange-50 px-4 py-3 text-xs leading-6 text-orange-800">
+                  <CircleDot className="mt-0.5 shrink-0" size={16} />
+                  <p>
+                    These details may be used only for Sahajayoga follow-up and
+                    guidance support. The report remains supportive guidance,
+                    not a final spiritual assessment.
+                  </p>
+                </div>
+              </form>
+            </div>
+
+            <div className="shrink-0 border-t border-orange-100 bg-white px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:pb-5">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  disabled={savingUserInfo}
+                  onClick={() => {
+                    setShowUserForm(false);
+                    setUserFormError("");
+                  }}
+                  className="inline-flex min-h-12 items-center justify-center rounded-full border border-orange-200 bg-white px-6 py-3 text-sm font-bold text-orange-700 transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Back
+                </button>
+
+                <button
+                  type="submit"
+                  form="guidance-user-details-form"
+                  disabled={savingUserInfo}
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-emerald-600 to-orange-500 px-7 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-200 transition hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                >
+                  {savingUserInfo ? (
+                    <>
+                      <Loader2 className="animate-spin" size={17} />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      Continue
+                      <ArrowRight size={17} />
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </PageShell>
   );
 }

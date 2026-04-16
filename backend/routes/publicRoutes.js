@@ -7,6 +7,7 @@ import {
   getContentBlock,
   submitQuestionnaire,
   getResultBySession,
+  updateResultUserInfo,
 } from "../controllers/publicController.js";
 import { getPublicTemplates } from "../controllers/templateController.js";
 
@@ -20,5 +21,6 @@ router.get("/nadis", getNadis);
 router.get("/content/:key", getContentBlock);
 router.post("/submit", submitQuestionnaire);
 router.get("/result/:sessionId", getResultBySession);
+router.patch("/result/:sessionId/user-info", updateResultUserInfo);
 
 export default router;

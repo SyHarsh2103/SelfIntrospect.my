@@ -4,6 +4,7 @@ import AboutPage from "./pages/AboutPage";
 import CenteringPage from "./pages/CenteringPage";
 import QuestionnairePage from "./pages/QuestionnairePage";
 import ResultPage from "./pages/ResultPage";
+import GuidancePage from "./pages/GuidancePage";
 
 import AdminLoginPage from "./pages/admin/AdminLoginPage";
 import AdminForgotPasswordPage from "./pages/admin/AdminForgotPasswordPage";
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="/center" element={<CenteringPage />} />
           <Route path="/questionnaire" element={<QuestionnairePage />} />
           <Route path="/result/:sessionId" element={<ResultPage />} />
+          <Route path="/result/:sessionId/guidance" element={<GuidancePage />} />
           <Route path="/profile" element={<ProfileSelectionPage />} />
 
           <Route path="/admin/login" element={<AdminLoginPage />} />
