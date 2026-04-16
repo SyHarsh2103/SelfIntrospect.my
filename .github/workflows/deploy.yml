@@ -33,7 +33,7 @@ jobs:
             --exclude "frontend/.env" \
             --exclude "frontend/.env.production" \
             -e "ssh -p ${{ secrets.SSH_PORT }}" \
-            ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/self-introspect
+            ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/selfintrospect.my
 
       - name: Build and restart on VPS
         run: |
@@ -60,9 +60,9 @@ jobs:
           npm run build
 
           echo "Deploying frontend build..."
-          mkdir -p "$FRONTEND_DEPLOY_DIR"
-          rm -rf "$FRONTEND_DEPLOY_DIR"/*
-          cp -r dist/* "$FRONTEND_DEPLOY_DIR"/
+          mkdir -p "$/var/www/self-introspect-frontend"
+          rm -rf "$/var/www/self-introspect-frontend"/*
+          cp -r "$/var/www/SelfIntrospect.my/frontend/dist/* /var/www/self-introspect-frontend"/
 
           echo "Reloading nginx..."
           nginx -t
