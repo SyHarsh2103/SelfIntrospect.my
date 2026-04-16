@@ -62,7 +62,7 @@ jobs:
           echo "Deploying frontend build..."
           mkdir -p "$/var/www/self-introspect-frontend"
           rm -rf "$/var/www/self-introspect-frontend"/*
-          cp -r "$/var/www/SelfIntrospect.my/frontend/dist/* /var/www/self-introspect-frontend"/
+          cp -r /var/www/SelfIntrospect.my/frontend/dist/* "$/var/www/self-introspect-frontend"/
 
           echo "Reloading nginx..."
           nginx -t
